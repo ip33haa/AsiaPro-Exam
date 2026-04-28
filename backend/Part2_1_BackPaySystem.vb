@@ -225,127 +225,154 @@ Public Module BackPaySystemModule
         End If
     End Sub
 
-    ' ========== Demo / Test ==========
+    ' ========== Input Helpers ==========
+
+    Private Function ReadDecimal(prompt As String) As Decimal
+        Dim value As Decimal
+        Do
+            Console.Write(prompt)
+            Dim input = Console.ReadLine()
+            If Decimal.TryParse(input, value) Then
+                Return value
+            End If
+            Console.WriteLine("  Invalid input. Please enter a valid number.")
+        Loop
+    End Function
+
+    Private Function ReadInteger(prompt As String) As Integer
+        Dim value As Integer
+        Do
+            Console.Write(prompt)
+            Dim input = Console.ReadLine()
+            If Integer.TryParse(input, value) Then
+                Return value
+            End If
+            Console.WriteLine("  Invalid input. Please enter a valid whole number.")
+        Loop
+    End Function
+
+    Private Function ReadDate(prompt As String) As Date
+        Dim value As Date
+        Do
+            Console.Write(prompt)
+            Dim input = Console.ReadLine()
+            If Date.TryParse(input, value) Then
+                Return value
+            End If
+            Console.WriteLine("  Invalid input. Please enter a valid date (e.g., 2025-01-15).")
+        Loop
+    End Function
+
+    Private Function ReadYesNo(prompt As String) As Boolean
+        Do
+            Console.Write(prompt & " (Y/N): ")
+            Dim input = Console.ReadLine().Trim().ToUpper()
+            If input = "Y" Then Return True
+            If input = "N" Then Return False
+            Console.WriteLine("  Please enter Y or N.")
+        Loop
+    End Function
+
+    ' ========== Interactive Main ==========
 
     Public Sub Main()
-        Console.WriteLine("=== Back Pay Computation System ===")
+        Console.WriteLine("=============================================")
+        Console.WriteLine("     BACK PAY COMPUTATION SYSTEM")
+        Console.WriteLine("=============================================")
         Console.WriteLine()
 
-        ' --- Sample Data (from exam) ---
+        ' --- Member Information ---
+        Console.WriteLine("--- Member Information ---")
         Dim member As New Member()
-        member.MemberId = 1
-        member.FirstName = "Juan"
-        member.LastName = "Dela Cruz"
-        member.DateHired = New Date(2020, 3, 15)
-        member.Position = "Production Worker"
-        member.MonthlySalary = 12500D
-        member.Status = "Separated"
+        Console.Write("Enter Member First Name: ")
+        member.FirstName = Console.ReadLine()
+        Console.Write("Enter Member Last Name: ")
+        member.LastName = Console.ReadLine()
+        member.DateHired = ReadDate("Enter Date Hired (yyyy-MM-dd): ")
+        Console.Write("Enter Position: ")
+        member.Position = Console.ReadLine()
+        member.MonthlySalary = ReadDecimal("Enter Monthly Salary: ")
+        Console.WriteLine()
 
+        ' --- Separation Details ---
+        Console.WriteLine("--- Separation Details ---")
         Dim clearance As New SeparationClearance()
-        clearance.ClearanceId = 1
-        clearance.MemberId = 1
-        clearance.SeparationDate = New Date(2025, 1, 15)
-        clearance.SeparationType = "Authorized Cause"
+        clearance.SeparationDate = ReadDate("Enter Separation Date (yyyy-MM-dd): ")
+        Console.Write("Enter Separation Type (Authorized Cause / Resignation / Just Cause): ")
+        clearance.SeparationType = Console.ReadLine()
         clearance.ClearanceStatus = "Approved"
+        Console.WriteLine()
+
+        ' --- Earnings ---
+        Console.WriteLine("--- Earnings ---")
+        Dim earnings As New BackPayEarnings()
+        earnings.SeparationPay = ReadDecimal("Enter Separation Pay: ")
+        earnings.FinalSalary = ReadDecimal("Enter Final Salary (last pay): ")
+        earnings.CooperativeShare = ReadDecimal("Enter Cooperative Share: ")
+        Console.WriteLine()
+
+        ' --- Deductions ---
+        Console.WriteLine("--- Deductions ---")
 
         ' Inventory items
         Dim inventoryItems As New List(Of InventoryItem)
-        inventoryItems.Add(New InventoryItem() With {
-            .InventoryId = 1, .MemberId = 1, .ItemName = "Laptop",
-            .ItemValue = 2000D, .IsReturned = False
-        })
-        inventoryItems.Add(New InventoryItem() With {
-            .InventoryId = 2, .MemberId = 1, .ItemName = "ID Badge",
-            .ItemValue = 500D, .IsReturned = True
-        })
-        inventoryItems.Add(New InventoryItem() With {
-            .InventoryId = 3, .MemberId = 1, .ItemName = "Uniform",
-            .ItemValue = 500D, .IsReturned = False
-        })
+        Dim itemCount = ReadInteger("How many unreturned inventory items? ")
+        For i As Integer = 1 To itemCount
+            Console.WriteLine($"  Inventory Item #{i}:")
+            Dim item As New InventoryItem()
+            Console.Write($"    Item Name: ")
+            item.ItemName = Console.ReadLine()
+            item.ItemValue = ReadDecimal($"    Item Value: ")
+            item.IsReturned = False
+            inventoryItems.Add(item)
+        Next
+        Dim inventoryDeduction = ComputeInventoryDeduction(inventoryItems)
+        Console.WriteLine()
 
         ' Loans
         Dim loans As New List(Of Loan)
-        loans.Add(New Loan() With {
-            .LoanId = 1, .MemberId = 1, .LoanType = "Salary Loan",
-            .OutstandingBalance = 5000D
-        })
-        loans.Add(New Loan() With {
-            .LoanId = 2, .MemberId = 1, .LoanType = "Emergency Loan",
-            .OutstandingBalance = 3000D
-        })
-
-        ' Use sample values from exam for direct computation
-        Console.WriteLine("--- Using Exam Sample Values ---")
+        Dim loanCount = ReadInteger("How many outstanding loans? ")
+        For i As Integer = 1 To loanCount
+            Console.WriteLine($"  Loan #{i}:")
+            Dim ln As New Loan()
+            Console.Write($"    Loan Type: ")
+            ln.LoanType = Console.ReadLine()
+            ln.OutstandingBalance = ReadDecimal($"    Outstanding Balance: ")
+            loans.Add(ln)
+        Next
+        Dim loanBalance = ComputeLoanBalance(loans)
         Console.WriteLine()
 
-        Dim sampleResult As New BackPayResult()
-        Dim sampleEarnings As New BackPayEarnings()
-        sampleEarnings.SeparationPay = 50000D
-        sampleEarnings.FinalSalary = 10000D
-        sampleEarnings.CooperativeShare = 5000D
-
-        Dim sampleDeductions As New BackPayDeductions()
-        sampleDeductions.InventoryDeduction = 3000D
-        sampleDeductions.LoanBalance = 8000D
-        sampleDeductions.RevolvingFund = 2000D
-
-        sampleResult.MemberName = "Sample Member"
-        sampleResult.Earnings = sampleEarnings
-        sampleResult.Deductions = sampleDeductions
-        sampleResult.NetBackPay = sampleEarnings.TotalEarnings - sampleDeductions.TotalDeductions
-        sampleResult.HasBalanceDue = (sampleResult.NetBackPay < 0)
-
-        DisplayResult(sampleResult)
+        Dim revolvingFund = ReadDecimal("Enter Revolving Fund Balance: ")
         Console.WriteLine()
 
-        ' --- Dynamic computation using member data ---
-        Console.WriteLine("--- Dynamic Computation (Member: Juan Dela Cruz) ---")
+        ' --- Build Deductions ---
+        Dim deductions As New BackPayDeductions()
+        deductions.InventoryDeduction = inventoryDeduction
+        deductions.LoanBalance = loanBalance
+        deductions.RevolvingFund = revolvingFund
+
+        ' --- Compute Net Back Pay ---
+        Dim netBackPay As Decimal = earnings.TotalEarnings - deductions.TotalDeductions
+
+        Dim result As New BackPayResult()
+        result.MemberName = member.FullName
+        result.Earnings = earnings
+        result.Deductions = deductions
+        result.NetBackPay = netBackPay
+        result.HasBalanceDue = (netBackPay < 0)
+
+        ' --- Display Result ---
+        Console.WriteLine()
+        Console.WriteLine("=============================================")
+        Console.WriteLine("            COMPUTATION RESULT")
+        Console.WriteLine("=============================================")
+        Console.WriteLine()
+        DisplayResult(result)
         Console.WriteLine()
 
-        Dim dynamicResult = ComputeBackPay(member, clearance, 10000D, 5000D,
-                                            inventoryItems, loans, 2000D)
-        DisplayResult(dynamicResult)
-        Console.WriteLine()
-
-        ' --- Edge Case: Deductions exceed earnings ---
-        Console.WriteLine("--- Edge Case: Deductions Exceed Earnings ---")
-        Console.WriteLine()
-
-        Dim edgeResult As New BackPayResult()
-        Dim edgeEarnings As New BackPayEarnings()
-        edgeEarnings.SeparationPay = 5000D
-        edgeEarnings.FinalSalary = 2000D
-        edgeEarnings.CooperativeShare = 1000D
-
-        Dim edgeDeductions As New BackPayDeductions()
-        edgeDeductions.InventoryDeduction = 5000D
-        edgeDeductions.LoanBalance = 8000D
-        edgeDeductions.RevolvingFund = 3000D
-
-        edgeResult.MemberName = "Edge Case Member"
-        edgeResult.Earnings = edgeEarnings
-        edgeResult.Deductions = edgeDeductions
-        edgeResult.NetBackPay = edgeEarnings.TotalEarnings - edgeDeductions.TotalDeductions
-        edgeResult.HasBalanceDue = (edgeResult.NetBackPay < 0)
-
-        DisplayResult(edgeResult)
-        Console.WriteLine()
-
-        ' --- Edge Case: Pending clearance (should throw error) ---
-        Console.WriteLine("--- Edge Case: Pending Clearance ---")
-        Try
-            Dim pendingClearance As New SeparationClearance()
-            pendingClearance.ClearanceId = 2
-            pendingClearance.MemberId = 1
-            pendingClearance.SeparationDate = New Date(2025, 1, 15)
-            pendingClearance.SeparationType = "Authorized Cause"
-            pendingClearance.ClearanceStatus = "Pending"
-
-            Dim pendingResult = ComputeBackPay(member, pendingClearance, 10000D, 5000D,
-                                                inventoryItems, loans, 2000D)
-        Catch ex As InvalidOperationException
-            Console.WriteLine($"  Error caught: {ex.Message}")
-        End Try
+        Console.WriteLine("Press any key to exit...")
+        Console.ReadKey()
     End Sub
 
 End Module

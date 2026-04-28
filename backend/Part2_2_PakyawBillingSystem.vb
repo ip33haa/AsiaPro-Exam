@@ -248,97 +248,167 @@ Public Module PakyawBillingSystemModule
         End If
     End Sub
 
-    ' ========== Demo / Test ==========
+    ' ========== Input Helpers ==========
+
+    Private Function ReadDecimal(prompt As String) As Decimal
+        Dim value As Decimal
+        Do
+            Console.Write(prompt)
+            Dim input = Console.ReadLine()
+            If Decimal.TryParse(input, value) Then
+                Return value
+            End If
+            Console.WriteLine("  Invalid input. Please enter a valid number.")
+        Loop
+    End Function
+
+    Private Function ReadInteger(prompt As String) As Integer
+        Dim value As Integer
+        Do
+            Console.Write(prompt)
+            Dim input = Console.ReadLine()
+            If Integer.TryParse(input, value) Then
+                Return value
+            End If
+            Console.WriteLine("  Invalid input. Please enter a valid whole number.")
+        Loop
+    End Function
+
+    Private Function ReadDate(prompt As String) As Date
+        Dim value As Date
+        Do
+            Console.Write(prompt)
+            Dim input = Console.ReadLine()
+            If Date.TryParse(input, value) Then
+                Return value
+            End If
+            Console.WriteLine("  Invalid input. Please enter a valid date (e.g., 2025-01-15).")
+        Loop
+    End Function
+
+    ' ========== Interactive Main ==========
 
     Public Sub Main()
-        Console.WriteLine("=== Pakyaw Billing and Collection System ===")
+        Console.WriteLine("=============================================")
+        Console.WriteLine("  PAKYAW BILLING AND COLLECTION SYSTEM")
+        Console.WriteLine("=============================================")
         Console.WriteLine()
 
-        ' --- Setup: SKUs ---
+        ' --- Step 1: Setup SKUs ---
+        Console.WriteLine("--- Step 1: Setup SKUs (Products & Piece Rates) ---")
         Dim skuList As New List(Of SKU)
-        skuList.Add(New SKU() With {.SKUId = 1, .SKUName = "Sliced Banana", .PieceRate = 5D})
-        skuList.Add(New SKU() With {.SKUId = 2, .SKUName = "Sliced Apple", .PieceRate = 7D})
+        Dim skuCount = ReadInteger("How many SKUs (products)? ")
+        For i As Integer = 1 To skuCount
+            Console.WriteLine($"  SKU #{i}:")
+            Dim s As New SKU()
+            s.SKUId = i
+            Console.Write("    SKU Name: ")
+            s.SKUName = Console.ReadLine()
+            s.PieceRate = ReadDecimal("    Piece Rate: ")
+            skuList.Add(s)
+        Next
+        Console.WriteLine()
 
-        ' --- Setup: Day Types ---
+        ' --- Day Types (predefined) ---
+        Console.WriteLine("--- Day Type Multipliers (predefined) ---")
         Dim dayTypeList As New List(Of DayType)
         dayTypeList.Add(New DayType() With {.DayTypeId = 1, .DayTypeName = "Regular Day", .Multiplier = 1.0D})
         dayTypeList.Add(New DayType() With {.DayTypeId = 2, .DayTypeName = "Special Holiday", .Multiplier = 1.3D})
         dayTypeList.Add(New DayType() With {.DayTypeId = 3, .DayTypeName = "Legal Holiday", .Multiplier = 2.0D})
+        Console.WriteLine("  1 - Regular Day      (x1.0)")
+        Console.WriteLine("  2 - Special Holiday  (x1.3)")
+        Console.WriteLine("  3 - Legal Holiday    (x2.0)")
+        Console.WriteLine()
 
-        ' --- Setup: Daily Outputs (from exam sample) ---
+        ' --- Step 2: Enter Daily Outputs ---
+        Console.WriteLine("--- Step 2: Enter Daily Outputs ---")
         Dim outputs As New List(Of DailyOutput)
-        outputs.Add(New DailyOutput() With {
-            .OutputDate = New Date(2025, 1, 12), .DayTypeName = "Legal Holiday",
-            .SKUName = "Sliced Banana", .Quantity = 150})
-        outputs.Add(New DailyOutput() With {
-            .OutputDate = New Date(2025, 1, 13), .DayTypeName = "Regular Day",
-            .SKUName = "Sliced Apple", .Quantity = 200})
-        outputs.Add(New DailyOutput() With {
-            .OutputDate = New Date(2025, 1, 14), .DayTypeName = "Regular Day",
-            .SKUName = "Sliced Apple", .Quantity = 100})
-        outputs.Add(New DailyOutput() With {
-            .OutputDate = New Date(2025, 1, 15), .DayTypeName = "Regular Day",
-            .SKUName = "Sliced Banana", .Quantity = 40})
-        outputs.Add(New DailyOutput() With {
-            .OutputDate = New Date(2025, 1, 15), .DayTypeName = "Regular Day",
-            .SKUName = "Sliced Apple", .Quantity = 50})
-        outputs.Add(New DailyOutput() With {
-            .OutputDate = New Date(2025, 1, 16), .DayTypeName = "Regular Day",
-            .SKUName = "Sliced Banana", .Quantity = 90})
-        outputs.Add(New DailyOutput() With {
-            .OutputDate = New Date(2025, 1, 17), .DayTypeName = "Regular Day",
-            .SKUName = "Sliced Banana", .Quantity = 100})
-        outputs.Add(New DailyOutput() With {
-            .OutputDate = New Date(2025, 1, 18), .DayTypeName = "Regular Day",
-            .SKUName = "Sliced Banana", .Quantity = 130})
-
-        ' --- Generate Billing ---
-        Console.WriteLine("--- Billing Computation (Exam Sample Data) ---")
-        Console.WriteLine()
-        Dim billing = GenerateBilling(outputs, skuList, dayTypeList)
-        DisplayBilling(billing)
+        Dim outputCount = ReadInteger("How many output entries? ")
+        For i As Integer = 1 To outputCount
+            Console.WriteLine($"  Output Entry #{i}:")
+            Dim o As New DailyOutput()
+            o.OutputDate = ReadDate("    Date (yyyy-MM-dd): ")
+            Console.WriteLine("    Day Type Options: 1=Regular Day, 2=Special Holiday, 3=Legal Holiday")
+            Dim dayTypeChoice = ReadInteger("    Day Type (1/2/3): ")
+            Select Case dayTypeChoice
+                Case 1 : o.DayTypeName = "Regular Day"
+                Case 2 : o.DayTypeName = "Special Holiday"
+                Case 3 : o.DayTypeName = "Legal Holiday"
+                Case Else
+                    Console.WriteLine("    Invalid choice, defaulting to Regular Day.")
+                    o.DayTypeName = "Regular Day"
+            End Select
+            Console.Write("    SKU Name: ")
+            o.SKUName = Console.ReadLine()
+            o.Quantity = ReadInteger("    Quantity (output): ")
+            outputs.Add(o)
+        Next
         Console.WriteLine()
 
-        ' --- Collection: Full Payment ---
-        Console.WriteLine("--- Collection Case 1: Full Payment ---")
-        Dim fullCollection = ProcessCollection(billing.BillableAmount, billing.BillableAmount)
-        DisplayCollection(fullCollection)
+        ' --- Step 3: Generate Billing ---
+        Console.WriteLine("=============================================")
+        Console.WriteLine("         BILLING COMPUTATION RESULT")
+        Console.WriteLine("=============================================")
         Console.WriteLine()
 
-        ' --- Collection: Partial Payment ---
-        Console.WriteLine("--- Collection Case 2: Partial Payment (4,000 of 6,700) ---")
-        Dim partialCollection = ProcessCollection(billing.BillableAmount, 4000D)
-        DisplayCollection(partialCollection)
-        Console.WriteLine()
-
-        ' --- Collection: No Payment ---
-        Console.WriteLine("--- Collection Case 3: No Payment ---")
-        Dim noCollection = ProcessCollection(billing.BillableAmount, 0D)
-        DisplayCollection(noCollection)
-        Console.WriteLine()
-
-        ' --- Edge Case: Unknown SKU ---
-        Console.WriteLine("--- Edge Case: Unknown SKU ---")
         Try
-            Dim badOutputs As New List(Of DailyOutput)
-            badOutputs.Add(New DailyOutput() With {
-                .OutputDate = New Date(2025, 1, 20), .DayTypeName = "Regular Day",
-                .SKUName = "Sliced Mango", .Quantity = 100})
-            Dim badBilling = GenerateBilling(badOutputs, skuList, dayTypeList)
-        Catch ex As ArgumentException
-            Console.WriteLine($"  Error caught: {ex.Message}")
-        End Try
-        Console.WriteLine()
+            Dim billing = GenerateBilling(outputs, skuList, dayTypeList)
+            DisplayBilling(billing)
+            Console.WriteLine()
 
-        ' --- Edge Case: Zero Output ---
-        Console.WriteLine("--- Edge Case: Zero Output ---")
-        Dim zeroOutputs As New List(Of DailyOutput)
-        zeroOutputs.Add(New DailyOutput() With {
-            .OutputDate = New Date(2025, 1, 20), .DayTypeName = "Regular Day",
-            .SKUName = "Sliced Banana", .Quantity = 0})
-        Dim zeroBilling = GenerateBilling(zeroOutputs, skuList, dayTypeList)
-        Console.WriteLine($"  Gross Payout for zero output: {zeroBilling.GrossPayout:N2}")
-        Console.WriteLine($"  Billable Amount: {zeroBilling.BillableAmount:N2}")
+            ' --- Step 4: Government Contributions ---
+            Console.WriteLine("--- Government Contributions (enter actual amounts) ---")
+            Console.Write("  Enter SSS Amount: ")
+            Dim sssInput = Console.ReadLine()
+            Console.Write("  Enter Pagibig Amount: ")
+            Dim pagibigInput = Console.ReadLine()
+            Console.Write("  Enter Philhealth Amount: ")
+            Dim philhealthInput = Console.ReadLine()
+
+            Dim sssVal As Decimal = 0D
+            Dim pagibigVal As Decimal = 0D
+            Dim philhealthVal As Decimal = 0D
+            Decimal.TryParse(sssInput, sssVal)
+            Decimal.TryParse(pagibigInput, pagibigVal)
+            Decimal.TryParse(philhealthInput, philhealthVal)
+
+            ' Override with user-entered contributions
+            billing.Contributions.SSS = sssVal
+            billing.Contributions.Pagibig = pagibigVal
+            billing.Contributions.Philhealth = philhealthVal
+            billing.BillableAmount = billing.GrossPayout + billing.Contributions.Total
+
+            Console.WriteLine()
+            Console.WriteLine("--- Updated Billing ---")
+            Console.WriteLine($"  Gross Payout:    {billing.GrossPayout:N2}")
+            Console.WriteLine($"  SSS:             {billing.Contributions.SSS:N2}")
+            Console.WriteLine($"  Pagibig:         {billing.Contributions.Pagibig:N2}")
+            Console.WriteLine($"  Philhealth:      {billing.Contributions.Philhealth:N2}")
+            Console.WriteLine($"  ─────────────────────────")
+            Console.WriteLine($"  BILLABLE AMOUNT: {billing.BillableAmount:N2}")
+            Console.WriteLine()
+
+            ' --- Step 5: Collection ---
+            Console.WriteLine("=============================================")
+            Console.WriteLine("           COLLECTION PROCESS")
+            Console.WriteLine("=============================================")
+            Console.WriteLine()
+            Console.WriteLine($"  Billable Amount: {billing.BillableAmount:N2}")
+            Dim amountCollected = ReadDecimal("  Enter Amount Collected from Client: ")
+            Console.WriteLine()
+
+            Dim collection = ProcessCollection(billing.BillableAmount, amountCollected)
+
+            Console.WriteLine("--- Collection Result ---")
+            DisplayCollection(collection)
+
+        Catch ex As ArgumentException
+            Console.WriteLine($"  Error: {ex.Message}")
+        End Try
+
+        Console.WriteLine()
+        Console.WriteLine("Press any key to exit...")
+        Console.ReadKey()
     End Sub
 
 End Module
